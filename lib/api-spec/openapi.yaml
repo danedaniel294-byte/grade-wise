@@ -1,15 +1,20 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: GradeWise GH API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: grades
+    description: Grade and GPA operations
+  - name: universities
+    description: University data
 paths:
   /healthz:
     get:
@@ -24,6 +29,217 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Sign up with username
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: User created or found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/signin:
+    post:
+      operationId: signin
+      tags: [auth]
+      summary: Sign in with username
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Signed in successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/signout:
+    post:
+      operationId: signout
+      tags: [auth]
+      summary: Sign out
+      responses:
+        "200":
+          description: Signed out successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /universities:
+    get:
+      operationId: getUniversities
+      tags: [universities]
+      summary: Get all Ghanaian universities
+      responses:
+        "200":
+          description: List of universities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/University"
+
+  /grades/semesters:
+    get:
+      operationId: getSemesters
+      tags: [grades]
+      summary: Get all semesters for the current user
+      responses:
+        "200":
+          description: List of semesters with courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Semester"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: saveSemester
+      tags: [grades]
+      summary: Save or update a semester's courses and grades
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveSemesterRequest"
+      responses:
+        "200":
+          description: Semester saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Semester"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grades/cgpa-goal:
+    get:
+      operationId: getCgpaGoal
+      tags: [grades]
+      summary: Get user's CGPA goal
+      responses:
+        "200":
+          description: CGPA goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CgpaGoal"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: saveCgpaGoal
+      tags: [grades]
+      summary: Save user's CGPA goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveCgpaGoalRequest"
+      responses:
+        "200":
+          description: CGPA goal saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CgpaGoal"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grades/profile:
+    post:
+      operationId: saveUserProfile
+      tags: [grades]
+      summary: Save user profile (university, level, theme)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveProfileRequest"
+      responses:
+        "200":
+          description: Profile saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +250,271 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    AuthRequest:
+      type: object
+      properties:
+        username:
+          type: string
+      required:
+        - username
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+      required:
+        - user
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        universityId:
+          type: integer
+          nullable: true
+        universityName:
+          type: string
+          nullable: true
+        currentLevel:
+          type: integer
+          nullable: true
+        themeColor:
+          type: string
+          nullable: true
+        customPrimaryColor:
+          type: string
+          nullable: true
+        customSecondaryColor:
+          type: string
+          nullable: true
+      required:
+        - id
+        - username
+
+    University:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        shortName:
+          type: string
+        gradingSystem:
+          type: string
+          enum:
+            - KNUST
+            - UG
+            - UCC
+            - UDS
+            - UMAT
+            - GIMPA
+            - AUCC
+            - STANDARD
+        gradingScale:
+          type: array
+          items:
+            $ref: "#/components/schemas/GradePoint"
+        firstClass:
+          type: number
+        secondClassUpper:
+          type: number
+        secondClassLower:
+          type: number
+        thirdClass:
+          type: number
+        pass:
+          type: number
+      required:
+        - id
+        - name
+        - shortName
+        - gradingSystem
+        - gradingScale
+        - firstClass
+        - secondClassUpper
+        - secondClassLower
+        - thirdClass
+        - pass
+
+    GradePoint:
+      type: object
+      properties:
+        grade:
+          type: string
+        minScore:
+          type: number
+        maxScore:
+          type: number
+        points:
+          type: number
+        interpretation:
+          type: string
+      required:
+        - grade
+        - minScore
+        - maxScore
+        - points
+        - interpretation
+
+    Semester:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        level:
+          type: integer
+        semesterNumber:
+          type: integer
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Course"
+        gpa:
+          type: number
+          nullable: true
+      required:
+        - id
+        - userId
+        - level
+        - semesterNumber
+        - courses
+
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        creditHours:
+          type: number
+        grade:
+          type: string
+          nullable: true
+        score:
+          type: number
+          nullable: true
+        gradePoints:
+          type: number
+          nullable: true
+      required:
+        - id
+        - name
+        - creditHours
+
+    SaveSemesterRequest:
+      type: object
+      properties:
+        level:
+          type: integer
+        semesterNumber:
+          type: integer
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaveCourseRequest"
+      required:
+        - level
+        - semesterNumber
+        - courses
+
+    SaveCourseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        creditHours:
+          type: number
+        grade:
+          type: string
+          nullable: true
+        score:
+          type: number
+          nullable: true
+      required:
+        - name
+        - creditHours
+
+    CgpaGoal:
+      type: object
+      properties:
+        targetCgpa:
+          type: number
+          nullable: true
+        remainingCredits:
+          type: number
+          nullable: true
+        requiredGpa:
+          type: number
+          nullable: true
+        likelihood:
+          type: string
+          nullable: true
+          enum:
+            - very_high
+            - high
+            - moderate
+            - low
+            - very_low
+            - null
+        currentCgpa:
+          type: number
+          nullable: true
+        classification:
+          type: string
+          nullable: true
+      required: []
+
+    SaveCgpaGoalRequest:
+      type: object
+      properties:
+        targetCgpa:
+          type: number
+        remainingCredits:
+          type: number
+      required:
+        - targetCgpa
+        - remainingCredits
+
+    SaveProfileRequest:
+      type: object
+      properties:
+        universityId:
+          type: integer
+          nullable: true
+        currentLevel:
+          type: integer
+          nullable: true
+        themeColor:
+          type: string
+          nullable: true
+        customPrimaryColor:
+          type: string
+          nullable: true
+        customSecondaryColor:
+          type: string
+          nullable: true
+      required: []

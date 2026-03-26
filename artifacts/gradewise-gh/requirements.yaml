@@ -1,0 +1,18 @@
+packages:
+  "framer-motion": "For page transitions and smooth UI micro-interactions"
+  "clsx": "Class merging for components"
+  "tailwind-merge": "Class merging for components"
+  "@hookform/resolvers": "For Zod form validation"
+  "react-hook-form": "For form state management"
+
+images:
+  - path: "artifacts/gradewise-gh/public/images/hero-bg.png"
+    description: "A stunning, clean, modern academic abstract background. Soft warm off-white and subtle indigo/blue gradients. Soft geometric shapes subtly hinting at education and growth. Premium quality, 4k."
+    aspect_ratio: "16:9"
+  - path: "artifacts/gradewise-gh/public/images/logo.png"
+    description: "Minimalist, premium logo for a university grades app. An elegant combination of an academic cap and an upward trending chart line. Deep indigo blue and warm gold colors. Transparent background if possible, or clean white."
+    aspect_ratio: "1:1"
+
+notes:
+  - Using generated orval hooks from @workspace/api-client-react
+  - Assuming standard shadcn/ui component exports exist in src/components/ui/

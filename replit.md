@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+GradeWise GH — A GPA/CGPA calculator web app for Ghanaian university students. Built as a pnpm workspace monorepo using TypeScript.
 
 ## Stack
 
@@ -12,85 +12,96 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
+- **Validation**: Zod, `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Build**: esbuild (ESM bundle)
+- **Frontend**: React + Vite, Tailwind CSS, shadcn/ui, Wouter, React Query
+- **Auth**: Session-based (express-session), username only
+- **Animations**: Framer Motion
+
+## Features
+
+- Sign up / Sign in with username only (no password)
+- 45+ Ghanaian universities with their specific grading scales (KNUST, UG, UCC, UDS, UMAT, GIMPA, and standard)
+- Level selection (100–600) and semester selection (1st / 2nd)
+- GPA & CGPA calculator per semester and cumulative
+- Desired CGPA goal setting with required GPA suggestions
+- Likelihood meter (Very High / High / Moderate / Low / Very Low) for academic achievement
+- Degree classification (First Class, 2nd Upper, 2nd Lower, Third Class, Pass, Fail)
+- Theme customization (Ocean Blue, Forest Green, Sunset Orange, Royal Purple, Rose Pink + custom colors)
+- User profile persistence (university, level, theme, goals saved to DB)
+- Logout functionality
 
 ## Structure
 
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── gradewise-gh/       # React + Vite frontend
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+├── tsconfig.json
+└── package.json
 ```
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references.
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+- **Always typecheck from the root** — run `pnpm run typecheck`
+- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck
+- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array
 
 ## Root Scripts
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
+- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages
 - `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
 
 ## Packages
 
+### `artifacts/gradewise-gh` (`@workspace/gradewise-gh`)
+
+React + Vite frontend. Serves at `/` (root). Uses shadcn/ui components, Wouter for routing, React Query for data fetching. Pages: Welcome (auth), Dashboard (GPA calculator), Goals (CGPA targets).
+
 ### `artifacts/api-server` (`@workspace/api-server`)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+Express 5 API server. Routes:
+- `GET /api/healthz` — health check
+- `POST /api/auth/signup` — sign up by username
+- `POST /api/auth/signin` — sign in by username
+- `POST /api/auth/signout` — sign out (destroy session)
+- `GET /api/auth/me` — get current user profile
+- `GET /api/universities` — list all Ghanaian universities
+- `GET /api/grades/semesters` — get user's semester records
+- `POST /api/grades/semesters` — save semester courses and compute GPA
+- `GET /api/grades/cgpa-goal` — get CGPA goal and current CGPA
+- `POST /api/grades/cgpa-goal` — save CGPA goal with required GPA calculation
+- `POST /api/grades/profile` — save user profile (university, level, theme)
 
 ### `lib/db` (`@workspace/db`)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+Schema:
+- `usersTable` — id, username (unique), universityId, currentLevel, themeColor, customPrimaryColor, customSecondaryColor, targetCgpa, remainingCredits
+- `semestersTable` — id, userId, level, semesterNumber, gpa
+- `coursesTable` — id, semesterId, name, creditHours, grade, score, gradePoints
 
 ### `lib/api-spec` (`@workspace/api-spec`)
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
+OpenAPI 3.1 spec. Run codegen: `pnpm --filter @workspace/api-spec run codegen`
 
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
+### `lib/api-zod` and `lib/api-client-react`
 
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+Generated from the OpenAPI spec via Orval.
 
-### `lib/api-zod` (`@workspace/api-zod`)
+## Notes
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- Auth is session-based using `express-session`. Sessions persist in memory (dev) and use cookies with `credentials: "include"` on the frontend.
+- Grading systems: KNUST, UG (University of Ghana), UCC, UDS, UMAT, GIMPA, and STANDARD (used by most other universities).
+- Degree classifications are per-university thresholds (First Class ≥ 3.6 for most GH universities).
+- `zod` must be imported from `"zod"` (not `"zod/v4"`) in api-server routes since esbuild bundles them.

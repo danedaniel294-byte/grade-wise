@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "GradeWise GH"
+version = "1.0.0"
+id = "artifacts/gradewise-gh"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21207
+
+[services.development]
+run = "pnpm --filter @workspace/gradewise-gh run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gradewise-gh", "run", "build" ]
+publicDir = "artifacts/gradewise-gh/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21207"
+BASE_PATH = "/"
