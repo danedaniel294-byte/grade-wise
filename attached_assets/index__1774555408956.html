@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GradeWise GH | Student Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        :root { 
+            --accent: #F5A623; --bg: #0D0F14; --card: rgba(26, 31, 46, 0.85); 
+            --border: rgba(255, 255, 255, 0.1); --text: #E8EAF0; --muted: #8A8F9F;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.4s ease; }
+        body { 
+            font-family: 'DM Sans', sans-serif; background: var(--bg);
+            background-image: radial-gradient(circle at top right, var(--accent)12, var(--bg));
+            background-attachment: fixed; color: var(--text); min-height: 100vh;
+        }
+        .card { 
+            background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); 
+            border-radius: 35px; padding: 35px; margin-bottom: 25px;
+        }
+        #mainApp { display: none; padding: 0 20px 100px 20px; max-width: 900px; margin: 0 auto; }
+        .logo { font-family: 'Syne'; font-weight: 800; font-size: 28px; }
+        .logo span { color: var(--accent); }
+        .course-row { display: grid; grid-template-columns: 2fr 1fr 1.5fr 40px; gap: 12px; margin-bottom: 15px; }
+        input, select { width: 100%; background: rgba(0,0,0,0.2); border: 1.5px solid var(--border); color: white; padding: 15px; border-radius: 15px; outline: none; }
+        .btn { padding: 18px; border-radius: 18px; border: none; font-family: 'Syne'; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 20px; font-size: 10px; }
+        .pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 12px; border-radius: 15px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--muted); }
+        .pill.active { background: var(--accent); color: #000; }
+        
+        .tab-nav { display: flex; gap: 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .tab-link { padding: 10px 0; cursor: pointer; font-size: 11px; font-weight: 800; color: var(--muted); border-bottom: 2px solid transparent; text-transform: uppercase; }
+        .tab-link.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tab-content { display: none; font-size: 13px; line-height: 1.6; color: var(--muted); }
+        .tab-content.active { display: block; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px; }
+        th { text-align: left; color: var(--accent); padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        td { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        #goalModal, #qrModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; align-items:center; justify-content:center; }
+        .modal-card { background: var(--bg); border: 2px solid var(--accent); border-radius: 30px; padding: 40px; text-align: center; max-width: 400px; width: 90%; }
+    </style>
+</head>
+<body id="bodyTag">
+
+<div id="authPage">
+    <div style="display:flex; align-items:center; justify-content:center; min-height: 100vh; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
+            <div class="logo" style="font-size: 35px;">GradeWise <span>GH</span></div>
+            <p style="margin: 20px 0; color: var(--muted);">Academic Tracking System</p>
+            <input type="text" id="username" placeholder="Student Name" style="margin-bottom:15px;">
+            <select id="userUni">
+                <option value="UCC">University of Cape Coast (UCC)</option>
+                <option value="UG">University of Ghana (UG)</option>
+                <option value="KNUST">KNUST (CWA)</option>
+                <option value="UPSA">UPSA</option>
+            </select>
+            <button class="btn btn-primary" style="margin-top:20px;" onclick="handleAuth()">Start Session</button>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding: 30px 0;">
+        <div class="logo">GradeWise <span>GH</span></div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-outline" onclick="showQR()">Share</button>
+            <button class="btn-outline" style="color: #E74C3C; border-color: #E74C3C;" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <label style="font-size:10px; color:var(--accent); font-weight:800; letter-spacing:1px;">WORKSPACE THEME</label>
+        <div style="display:flex; gap:15px; margin-top:15px; align-items: center;">
+            <div onclick="setTheme('#2ECC71', '#051A0D')" style="width:35px;height:35px;background:#2ECC71;border-radius:10px;cursor:pointer;"></div>
+            <div onclick="setTheme('#4A9EFF', '#050D1A')" style="width:35px;height:35px;background:#4A9EFF;border-radius:10px;cursor:pointer;"></div>
+            <div onclick="setTheme('#F5A623', '#0D0F14')" style="width:35px;height:35px;background:#F5A623;border-radius:10px;cursor:pointer;"></div>
+            <input type="color" oninput="setTheme(this.value, '#0D0F14')" style="width:35px;height:35px;border-radius:10px;background:none;border:none;cursor:pointer;">
+        </div>
+    </div>
+
+    <div class="card">
+        <label style="font-size:10px; color:var(--accent); font-weight:800; letter-spacing:1px; display:block; margin-bottom:15px;">ACADEMIC PERIOD</label>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:20px;">
+            <div class="pill active" onclick="selectLevel(100)">Level 100</div>
+            <div class="pill" onclick="selectLevel(200)">Level 200</div>
+            <div class="pill" onclick="selectLevel(300)">Level 300</div>
+            <div class="pill" onclick="selectLevel(400)">Level 400</div>
+            <div class="pill" onclick="selectLevel(500)">Level 500</div>
+            <div class="pill" onclick="selectLevel(600)">Level 600</div>
+        </div>
+        <select id="semSelect" onchange="loadLevelData()" style="margin-bottom: 20px;">
+            <option value="1">Semester 1</option>
+            <option value="2">Semester 2</option>
+        </select>
+        <div id="courseList"></div>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button class="btn btn-outline" style="flex:1;" onclick="addCourseRow()">+ Add Course</button>
+            <button class="btn btn-primary" style="flex:1.5;" onclick="saveAndProcess()">Save & Update CGPA</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <label>FINAL CGPA GOAL</label>
+        <input type="number" id="targetGPA" placeholder="3.95" step="0.01" style="margin-top:10px;">
+        <button class="btn btn-primary" style="margin-top:15px;" onclick="saveTarget()">Save Goal & Analyze</button>
+    </div>
+
+    <div class="card" style="text-align: center; border: 1px dashed var(--accent); margin-top: 20px;">
+        <p style="font-size: 10px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px;">SUPPORT THE PROJECT</p>
+        <button class="btn btn-outline" style="width: auto; padding: 12px 25px;" 
+                onclick="window.open('https://www.profitablecpmratenetwork.com/e5166h37t?key=cfc0da1e7cac2416bb88c507a1094a85', '_blank')">
+             Unlock Study Resources
+        </button>
+        <p style="font-size: 9px; color: var(--muted); margin-top: 8px;">(Ad opens in a new tab to keep results safe)</p>
+    </div>
+
+    <div class="card" id="resultsCard" style="display:none;">
+        <div style="text-align: center;">
+            <h4 style="font-size:10px; color:var(--muted); letter-spacing:2px;">CUMULATIVE GPA</h4>
+            <div id="finalCGPA" style="font-size: 65px; font-family:'Syne'; color:var(--accent); font-weight:800;">0.00</div>
+            <div id="classTag" style="font-weight:700; margin-bottom:25px;">---</div>
+        </div>
+        <h4 style="font-size:11px; color:var(--accent); margin-bottom:10px;">SEMESTER BREAKDOWN</h4>
+        <table id="summaryTable">
+            <thead><tr><th>Semester</th><th>GPA</th><th>CGPA</th></tr></thead>
+            <tbody id="summaryBody"></tbody>
+        </table>
+        <div style="height:250px; margin-top:20px;"><canvas id="performanceChart"></canvas></div>
+    </div>
+
+    <div class="card" id="successVault" style="display:none;">
+        <h3 style="font-family:'Syne';">Success Formula</h3>
+        <div id="tipContainer"></div>
+    </div>
+
+    <div class="card">
+        <div class="tab-nav">
+            <div class="tab-link active" onclick="openTab(event, 'about')">About</div>
+            <div class="tab-link" onclick="openTab(event, 'privacy')">Privacy</div>
+            <div class="tab-link" onclick="openTab(event, 'terms')">Terms</div>
+            <div class="tab-link" onclick="openTab(event, 'pricing')">Pricing</div>
+        </div>
+        <div id="about" class="tab-content active">GradeWise GH is a dedicated academic portal for Ghanaian students.</div>
+        <div id="privacy" class="tab-content">Your data is stored locally. We do not track personal grades.</div>
+        <div id="terms" class="tab-content">Check official university portals for final confirmations.</div>
+        <div id="pricing" class="tab-content">Free for all students. Premium tools coming soon.</div>
+    </div>
+
+    <div style="width: 100%; display: flex; justify-content: center; padding: 20px 0; overflow: hidden;">
+        <script>
+            atOptions = {
+                'key' : '9bf4381e0e12dd881b800f5216401a13',
+                'format' : 'iframe',
+                'height' : 90,
+                'width' : 728,
+                'params' : {}
+            };
+        </script>
+        <script src="https://www.highperformanceformat.com/9bf4381e0e12dd881b800f5216401a13/invoke.js"></script>
+    </div>
+
+    <div style="text-align:center; padding: 20px 0;">
+        <p style="font-size:10px; color:var(--muted); margin-bottom: 10px;">© 2026 GradeWise GH</p>
+        <img src="https://count.getloli.com/get/@gradewisegh-final-v1?theme=asoul" alt="Visits" style="height: 20px; opacity:0.8;">
+    </div>
+</div>
+
+<div id="goalModal"><div class="modal-card">
+    <h2 style="font-family:'Syne'; color:var(--accent); margin-bottom:15px;">EYE ON THE PRIZE!</h2>
+    <p style="font-size:14px; margin-bottom:20px;">Your current goal is <strong id="modalGoalValue">---</strong>.</p>
+    <button class="btn btn-primary" onclick="closeGoalModal()">Let's Work</button>
+</div></div>
+
+<div id="qrModal" onclick="this.style.display='none'"><div style="background:white; padding:30px; border-radius:30px;">
+    <div id="qrcode"></div>
+    <p style="color:#000; font-weight:800; font-size:10px; margin-top:15px;">SCAN TO SHARE</p>
+</div></div>
+
+<script>
+    let currentLevel = 100; let myChart = null;
+
+    const uniSystems = {
+        UCC: { "A": 4.0, "B+": 3.5, "B": 3.0, "C+": 2.5, "C": 2.0, "D+": 1.5, "D": 1.0, "E": 0 },
+        UG: { "A": 4.0, "B+": 3.5, "B": 3.0, "C+": 2.5, "C": 2.0, "D+": 1.5, "D": 1.0, "F": 0 },
+        KNUST: { "70-100 (A)": 85, "60-69 (B)": 65, "50-59 (C)": 55, "40-49 (D)": 45, "0-39 (F)": 20 },
+        UPSA: { "A": 4.0, "B+": 3.5, "B": 3.0, "C+": 2.5, "C": 2.0, "D+": 1.5, "D": 1.0, "F": 0 }
+    };
+
+    function setTheme(accent, bg) {
+        document.documentElement.style.setProperty('--accent', accent);
+        document.documentElement.style.setProperty('--bg', bg);
+    }
+
+    function openTab(evt, tabName) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    function handleAuth() {
+        const u = document.getElementById('username').value;
+        const uni = document.getElementById('userUni').value;
+        if(!u) return alert("Enter your name");
+        localStorage.setItem('gw_user', u);
+        localStorage.setItem('gw_uni', uni);
+        location.reload();
+    }
+
+    function selectLevel(lvl) {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        event.target.classList.add('active');
+        currentLevel = lvl; loadLevelData();
+    }
+
+    function addCourseRow(data = {}) {
+        const uni = localStorage.getItem('gw_uni') || 'UCC';
+        const system = uniSystems[uni];
+        let options = Object.keys(system).map(grade => `<option value="${system[grade]}" ${data.g == system[grade] ? 'selected' : ''}>${grade}</option>`).join('');
+        const div = document.createElement('div'); div.className = 'course-row';
+        div.innerHTML = `<input type="text" placeholder="Course" value="${data.n||''}">
+            <input type="number" class="c-cred" value="${data.c||3}">
+            <select class="c-grade">${options}</select>
+            <div onclick="this.parentElement.remove()" style="cursor:pointer; line-height:45px; color:red; font-weight:bold;">×</div>`;
+        document.getElementById('courseList').appendChild(div);
+    }
+
+    function saveAndProcess() { saveCurrentLevel(); calculateEverything(); alert("Updated!"); }
+    function saveTarget() { localStorage.setItem(`gw_target_${localStorage.getItem('gw_user')}`, document.getElementById('targetGPA').value); calculateEverything(); }
+
+    function calculateEverything() {
+        const user = localStorage.getItem('gw_user');
+        const uni = localStorage.getItem('gw_uni');
+        const target = parseFloat(localStorage.getItem(`gw_target_${user}`)) || 0;
+        document.getElementById('targetGPA').value = target || "";
+        let totalP = 0, totalC = 0, cLabels = [], cData = [];
+        const tableBody = document.getElementById('summaryBody');
+        tableBody.innerHTML = '';
+
+        for(let l=100; l<=600; l+=100) {
+            for(let s=1; s<=2; s++) {
+                const data = JSON.parse(localStorage.getItem(`gw_${user}_${l}_${s}`));
+                if(data && data.length > 0) {
+                    let sp = 0, sc = 0;
+                    data.forEach(c => { sc += parseFloat(c.c); sp += (parseFloat(c.c) * parseFloat(c.g)); });
+                    totalP += sp; totalC += sc;
+                    cLabels.push(`L${l}S${s}`); cData.push((totalP/totalC).toFixed(2));
+                    tableBody.innerHTML += `<tr><td>L${l} S${s}</td><td>${(sp/sc).toFixed(2)}</td><td style="color:var(--accent); font-weight:bold;">${(totalP/totalC).toFixed(2)}</td></tr>`;
+                }
+            }
+        }
+        const finalCGPA = totalP / totalC;
+        if(isNaN(finalCGPA)) return;
+        document.getElementById('resultsCard').style.display = 'block';
+        document.getElementById('successVault').style.display = 'block';
+        document.getElementById('finalCGPA').innerText = finalCGPA.toFixed(2);
+        
+        let classTitle = "Pass";
+        if (uni === 'KNUST') { if(finalCGPA >= 70) classTitle = "1st Class"; else if(finalCGPA >= 60) classTitle = "2nd Upper"; }
+        else { if(finalCGPA >= 3.6) classTitle = "1st Class"; else if(finalCGPA >= 3.0) classTitle = "2nd Upper"; }
+        document.getElementById('classTag').innerText = classTitle;
+
+        if (target > 0) {
+            const nextCr = 18; const req = ((target * (totalC + nextCr)) - totalP) / nextCr;
+            const msg = req > 4.0 ? ` To hit ${target}, you need a GPA of ${req.toFixed(2)}.` : ` To hit ${target}, you need roughly <strong>5 A's and 1 B+</strong> next semester.`;
+            document.getElementById('tipContainer').innerHTML = `<div class="tip-box">${msg}</div>`;
+        }
+        updateChart(cLabels, cData, uni);
+    }
+
+    function updateChart(labels, data, uni) {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const threshold = (uni === 'KNUST') ? 70 : 3.6;
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [
+            { label: 'Cumulative CGPA', data, borderColor: '#F5A623', tension: 0.3, fill: false },
+            { label: 'First Class Line', data: Array(labels.length).fill(threshold), borderColor: 'rgba(255,255,255,0.2)', borderDash: [5, 5], borderWidth: 1, pointRadius: 0, fill: false }
+        ]}});
+    }
+
+    function saveCurrentLevel() {
+        const u = localStorage.getItem('gw_user'); const sem = document.getElementById('semSelect').value;
+        const courses = Array.from(document.querySelectorAll('.course-row')).map(r => ({
+            n: r.querySelector('input').value, c: r.querySelector('.c-cred').value, g: r.querySelector('.c-grade').value
+        }));
+        localStorage.setItem(`gw_${u}_${currentLevel}_${sem}`, JSON.stringify(courses));
+    }
+
+    function loadLevelData() {
+        const u = localStorage.getItem('gw_user'); const sem = document.getElementById('semSelect').value;
+        document.getElementById('courseList').innerHTML = '';
+        const saved = JSON.parse(localStorage.getItem(`gw_${u}_${currentLevel}_${sem}`));
+        if(saved) saved.forEach(c => addCourseRow(c)); else { addCourseRow(); addCourseRow(); }
+    }
+
+    function showQR() { document.getElementById('qrModal').style.display = 'flex'; document.getElementById('qrcode').innerHTML = ''; new QRCode(document.getElementById("qrcode"), window.location.href); }
+    function showGoalReminder() { const t = localStorage.getItem(`gw_target_${localStorage.getItem('gw_user')}`); if(t) { document.getElementById('modalGoalValue').innerText = t; document.getElementById('goalModal').style.display = 'flex'; } }
+    function closeGoalModal() { document.getElementById('goalModal').style.display = 'none'; }
+    function logout() { localStorage.removeItem('gw_user'); location.reload(); }
+
+    window.onload = () => { if(localStorage.getItem('gw_user')) { document.getElementById('authPage').style.display = 'none'; document.getElementById('mainApp').style.display = 'block'; loadLevelData(); calculateEverything(); setTimeout(showGoalReminder, 1000); } };
+</script>
+</body>
+</html>
