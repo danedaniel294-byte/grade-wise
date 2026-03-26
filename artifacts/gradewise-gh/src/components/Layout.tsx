@@ -10,6 +10,7 @@ import { useTheme, ThemePreset } from "@/hooks/use-theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { QrShareModal } from "./QrShareModal";
+import { PwaInstallBanner } from "./PwaInstallBanner";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -40,6 +41,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
+      <PwaInstallBanner />
       {/* Goal Reminder Modal */}
       <Dialog open={goalModalOpen} onOpenChange={setGoalModalOpen}>
         <DialogContent className="max-w-sm rounded-3xl p-8 text-center shadow-2xl border-primary/20">
