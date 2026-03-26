@@ -1,12 +1,15 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useGetMe, useSignout } from "@workspace/api-client-react";
+import { useGetMe, useSignout, useGetCgpaGoal } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Palette, Check, Calculator, Target, LayoutDashboard } from "lucide-react";
+import { LogOut, Palette, Check, Calculator, Target, LayoutDashboard, Trophy } from "lucide-react";
 import { useTheme, ThemePreset } from "@/hooks/use-theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { QrShareModal } from "./QrShareModal";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -14,6 +17,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { mutate: signout } = useSignout();
   const queryClient = useQueryClient();
   const { activeTheme, setTheme, presets } = useTheme();
+  const { data: goalData } = useGetCgpaGoal();
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (goalData?.targetCgpa && goalData.targetCgpa > 0) {
+      const timer = setTimeout(() => setGoalModalOpen(true), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [goalData?.targetCgpa]);
 
   const handleSignout = () => {
     signout(undefined, {
@@ -24,10 +36,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
     });
   };
 
-  if (!user) return null; // App.tsx handles auth guard
+  if (!user) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
+      {/* Goal Reminder Modal */}
+      <Dialog open={goalModalOpen} onOpenChange={setGoalModalOpen}>
+        <DialogContent className="max-w-sm rounded-3xl p-8 text-center shadow-2xl border-primary/20">
+          <div className="flex justify-center mb-4">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <Trophy className="w-8 h-8 text-primary" />
+            </div>
+          </div>
+          <DialogTitle className="font-display text-xl font-bold mb-2">Eye On The Prize!</DialogTitle>
+          <p className="text-muted-foreground text-sm mb-4">
+            Your current CGPA goal is
+          </p>
+          <div className="text-5xl font-display font-extrabold text-primary mb-4">
+            {goalData?.targetCgpa?.toFixed(2)}
+          </div>
+          <p className="text-xs text-muted-foreground mb-6">Keep pushing — every grade counts.</p>
+          <Button
+            className="w-full h-12 rounded-xl font-semibold shadow-lg shadow-primary/20"
+            onClick={() => setGoalModalOpen(false)}
+          >
+            Let's Work!
+          </Button>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="sticky top-0 z-50 w-full glass-panel border-x-0 border-t-0 rounded-none shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -45,8 +82,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Link
                 href="/"
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  location === "/" 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                  location === "/"
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
@@ -56,8 +93,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Link
                 href="/goals"
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  location === "/goals" 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                  location === "/goals"
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
@@ -67,7 +104,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <QrShareModal />
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full hover:bg-secondary">
@@ -109,8 +148,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <p className="font-medium">{user.username}</p>
                   <p className="text-xs text-muted-foreground">{user.universityName || "No University Selected"}</p>
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
                   onClick={handleSignout}
                 >

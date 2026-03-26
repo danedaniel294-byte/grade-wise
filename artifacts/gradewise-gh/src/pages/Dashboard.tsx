@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { 
-  useGetMe, 
-  useGetUniversities, 
-  useGetSemesters, 
+import {
+  useGetMe,
+  useGetUniversities,
+  useGetSemesters,
   useSaveSemester,
   SaveCourseRequest
 } from "@workspace/api-client-react";
@@ -10,12 +10,51 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Save, GraduationCap, Award, Calculator, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, GraduationCap, Award, Calculator, Loader2, BookOpen, ExternalLink, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Legend,
+} from "recharts";
+import { AdsterraBanner } from "@/components/AdsterraBanner";
 
 const LEVELS = [100, 200, 300, 400, 500, 600];
 const SEMESTERS = [1, 2];
+
+const INFO_TABS = [
+  {
+    id: "about",
+    label: "About",
+    content:
+      "GradeWise GH is a dedicated academic tracking portal built specifically for Ghanaian university students. Enter your courses and grades each semester, and the system automatically calculates your GPA and CGPA using your institution's official grading scale. Supports 45+ Ghanaian universities.",
+  },
+  {
+    id: "privacy",
+    label: "Privacy",
+    content:
+      "Your grades and personal data are stored securely on our server and are tied to your username session only. We do not collect, sell, or share your academic information with any third party. Your data is yours.",
+  },
+  {
+    id: "terms",
+    label: "Terms",
+    content:
+      "GradeWise GH is a student productivity tool and is not affiliated with any Ghanaian university. Always verify your official grades on your institution's student portal. Results here are for planning purposes only.",
+  },
+  {
+    id: "pricing",
+    label: "Pricing",
+    content:
+      "GradeWise GH is completely free for all students. We are supported by non-intrusive ads and the generosity of the student community. Premium features and tools may be introduced in the future.",
+  },
+];
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -27,8 +66,8 @@ export default function Dashboard() {
   const [activeLevel, setActiveLevel] = useState(100);
   const [activeSemester, setActiveSemester] = useState(1);
   const [localCourses, setLocalCourses] = useState<SaveCourseRequest[]>([]);
+  const [activeTab, setActiveTab] = useState("about");
 
-  // Find user's university to get grading scale
   const university = useMemo(() => {
     if (!universities || !user?.universityId) return null;
     return universities.find(u => u.id === user.universityId);
@@ -36,11 +75,9 @@ export default function Dashboard() {
 
   const gradingScale = university?.gradingScale || [];
 
-  // Update local courses when level/semester changes or data arrives
   useEffect(() => {
     if (!semesters) return;
     const existing = semesters.find(s => s.level === activeLevel && s.semesterNumber === activeSemester);
-    
     if (existing && existing.courses.length > 0) {
       setLocalCourses(existing.courses.map(c => ({
         name: c.name,
@@ -49,7 +86,6 @@ export default function Dashboard() {
         score: c.score
       })));
     } else {
-      // Default empty rows
       setLocalCourses([
         { name: "", creditHours: 3, grade: null, score: null },
         { name: "", creditHours: 3, grade: null, score: null },
@@ -72,7 +108,6 @@ export default function Dashboard() {
     setLocalCourses(updated);
   };
 
-  // GPA Calculation Logic
   const getPointsForGrade = (grade: string | null) => {
     if (!grade) return 0;
     const scale = gradingScale.find(g => g.grade === grade);
@@ -82,25 +117,20 @@ export default function Dashboard() {
   const calculateGpa = (courses: SaveCourseRequest[]) => {
     let totalCredits = 0;
     let totalPoints = 0;
-    
     courses.forEach(c => {
       if (c.grade && c.creditHours > 0) {
         totalCredits += c.creditHours;
         totalPoints += (getPointsForGrade(c.grade) * c.creditHours);
       }
     });
-    
     return totalCredits > 0 ? (totalPoints / totalCredits) : 0;
   };
 
   const currentGpa = useMemo(() => calculateGpa(localCourses), [localCourses, gradingScale]);
 
-  // CGPA Calculation Logic
   const calculateCgpa = () => {
     let totalCredits = 0;
     let totalPoints = 0;
-
-    // Add all saved semesters EXCEPT the current active one
     semesters?.forEach(s => {
       if (s.level === activeLevel && s.semesterNumber === activeSemester) return;
       s.courses.forEach(c => {
@@ -110,15 +140,12 @@ export default function Dashboard() {
         }
       });
     });
-
-    // Add current local form state
     localCourses.forEach(c => {
       if (c.grade && c.creditHours > 0) {
         totalCredits += c.creditHours;
         totalPoints += (getPointsForGrade(c.grade) * c.creditHours);
       }
     });
-
     return totalCredits > 0 ? (totalPoints / totalCredits) : 0;
   };
 
@@ -134,14 +161,37 @@ export default function Dashboard() {
     return "Fail";
   };
 
+  // Build cumulative CGPA progress chart data from all saved semesters
+  const chartData = useMemo(() => {
+    if (!semesters) return [];
+    let totalCredits = 0;
+    let totalPoints = 0;
+    const points: { label: string; cgpa: number }[] = [];
+
+    for (let l = 100; l <= 600; l += 100) {
+      for (let s = 1; s <= 2; s++) {
+        const sem = semesters.find(x => x.level === l && x.semesterNumber === s);
+        if (!sem || sem.courses.length === 0) continue;
+        sem.courses.forEach(c => {
+          if (c.grade && c.creditHours > 0) {
+            totalCredits += c.creditHours;
+            totalPoints += getPointsForGrade(c.grade) * c.creditHours;
+          }
+        });
+        if (totalCredits > 0) {
+          points.push({ label: `L${l}S${s}`, cgpa: parseFloat((totalPoints / totalCredits).toFixed(2)) });
+        }
+      }
+    }
+    return points;
+  }, [semesters, gradingScale]);
+
   const handleSave = () => {
-    // Filter out empty courses
     const validCourses = localCourses.filter(c => c.name.trim() !== "");
     if (validCourses.length === 0) {
       toast({ title: "No valid courses", description: "Please enter at least one course with a name.", variant: "destructive" });
       return;
     }
-
     saveSemester(
       { data: { level: activeLevel, semesterNumber: activeSemester, courses: validCourses } },
       {
@@ -164,8 +214,11 @@ export default function Dashboard() {
     );
   }
 
+  const firstClassThreshold = university.firstClass;
+
   return (
     <div className="space-y-6 md:space-y-8 pb-12">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
@@ -174,8 +227,6 @@ export default function Dashboard() {
             {university.name} • {university.gradingSystem} System
           </p>
         </div>
-        
-        {/* Quick Stats Banner */}
         <div className="flex flex-wrap gap-3">
           <div className="bg-card border border-border/60 shadow-sm rounded-2xl p-4 flex flex-col justify-center min-w-[140px]">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Active GPA</span>
@@ -196,7 +247,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Selectors */}
+      {/* Level / Semester Selectors */}
       <div className="bg-card border border-border/60 shadow-sm rounded-2xl p-2 flex flex-col md:flex-row gap-2">
         <div className="flex gap-1 overflow-x-auto pb-2 md:pb-0 hide-scrollbar flex-1">
           {LEVELS.map(level => (
@@ -204,8 +255,8 @@ export default function Dashboard() {
               key={level}
               onClick={() => setActiveLevel(level)}
               className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-                activeLevel === level 
-                  ? "bg-primary/10 text-primary shadow-sm" 
+                activeLevel === level
+                  ? "bg-primary/10 text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
@@ -220,8 +271,8 @@ export default function Dashboard() {
               key={sem}
               onClick={() => setActiveSemester(sem)}
               className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex-1 md:flex-none ${
-                activeSemester === sem 
-                  ? "bg-secondary text-foreground shadow-sm border border-border/50" 
+                activeSemester === sem
+                  ? "bg-secondary text-foreground shadow-sm border border-border/50"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
@@ -238,8 +289,8 @@ export default function Dashboard() {
             <CardTitle className="font-display text-xl">Level {activeLevel}, Sem {activeSemester}</CardTitle>
             <CardDescription>Enter your courses and grades to calculate GPA.</CardDescription>
           </div>
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={saving}
             className="rounded-xl shadow-md hover:shadow-lg transition-all"
           >
@@ -252,7 +303,7 @@ export default function Dashboard() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-secondary/20">
                 <tr>
-                  <th className="px-6 py-4 font-medium rounded-tl-lg">Course Code/Name</th>
+                  <th className="px-6 py-4 font-medium">Course Code/Name</th>
                   <th className="px-6 py-4 font-medium w-32">Credits</th>
                   <th className="px-6 py-4 font-medium w-40">Grade</th>
                   <th className="px-6 py-4 font-medium w-24 text-right">Actions</th>
@@ -261,7 +312,7 @@ export default function Dashboard() {
               <tbody>
                 <AnimatePresence initial={false}>
                   {localCourses.map((course, index) => (
-                    <motion.tr 
+                    <motion.tr
                       key={index}
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -305,9 +356,9 @@ export default function Dashboard() {
                         </Select>
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => removeCourse(index)}
                           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
                         >
@@ -321,8 +372,8 @@ export default function Dashboard() {
             </table>
           </div>
           <div className="p-4 border-t border-border/40 bg-secondary/10 flex justify-center">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={addCourse}
               className="rounded-xl border-dashed border-2 hover:bg-secondary hover:text-foreground text-muted-foreground bg-transparent"
             >
@@ -332,6 +383,140 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* CGPA Progress Chart */}
+      {chartData.length >= 2 && (
+        <Card className="rounded-3xl border-border/60 shadow-lg shadow-black/5 overflow-hidden">
+          <CardHeader className="bg-secondary/30 border-b border-border/40 px-6 py-5">
+            <CardTitle className="font-display text-xl flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              CGPA Progress
+            </CardTitle>
+            <CardDescription>Your cumulative GPA trend across all semesters.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  domain={[0, firstClassThreshold > 4 ? 5 : 4]}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickCount={5}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    color: "hsl(var(--foreground))",
+                  }}
+                  formatter={(val: number) => [val.toFixed(2), "CGPA"]}
+                />
+                <Legend wrapperStyle={{ fontSize: "11px", color: "hsl(var(--muted-foreground))" }} />
+                <ReferenceLine
+                  y={firstClassThreshold}
+                  stroke="hsl(var(--primary))"
+                  strokeDasharray="5 5"
+                  strokeWidth={1.5}
+                  label={{
+                    value: "1st Class",
+                    fill: "hsl(var(--primary))",
+                    fontSize: 10,
+                    position: "insideTopRight",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="cgpa"
+                  name="CGPA"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.5}
+                  dot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                  activeDot={{ r: 7 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Support the Project (Adsterra Affiliate) */}
+      <Card className="rounded-3xl border-dashed border-2 border-primary/30 bg-primary/5 shadow-none">
+        <CardContent className="p-6 flex flex-col sm:flex-row items-center gap-4 justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Support the Project</p>
+            <p className="text-sm text-muted-foreground">Keep GradeWise GH free by checking out our sponsor.</p>
+          </div>
+          <a
+            href="https://www.profitablecpmratenetwork.com/e5166h37t?key=cfc0da1e7cac2416bb88c507a1094a85"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" className="rounded-xl gap-2 shrink-0 border-primary/30 hover:bg-primary/10 hover:text-primary">
+              <BookOpen className="w-4 h-4" />
+              Unlock Study Resources
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </Button>
+          </a>
+        </CardContent>
+      </Card>
+
+      {/* Info Tabs: About / Privacy / Terms / Pricing */}
+      <Card className="rounded-3xl border-border/60 shadow-lg shadow-black/5 overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex gap-1 border-b border-border/50 mb-5 overflow-x-auto hide-scrollbar">
+            {INFO_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-3 px-4 text-xs font-bold uppercase tracking-widest whitespace-nowrap border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <AnimatePresence mode="wait">
+            {INFO_TABS.filter(t => t.id === activeTab).map(tab => (
+              <motion.p
+                key={tab.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+                className="text-sm text-muted-foreground leading-relaxed"
+              >
+                {tab.content}
+              </motion.p>
+            ))}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+
+      {/* Adsterra Banner Ad */}
+      <AdsterraBanner />
+
+      {/* Footer: copyright + visit counter */}
+      <div className="flex flex-col items-center gap-3 py-4">
+        <p className="text-xs text-muted-foreground">© 2026 GradeWise GH. All rights reserved.</p>
+        <img
+          src="https://count.getloli.com/get/@gradewisegh-final-v1?theme=asoul"
+          alt="Site visits"
+          className="h-5 opacity-70 hover:opacity-100 transition-opacity"
+        />
+      </div>
     </div>
   );
 }
