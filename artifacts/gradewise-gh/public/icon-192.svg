@@ -1,0 +1,8 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="40" fill="#3B54E8"/>
+  <rect x="36" y="36" width="120" height="120" rx="20" fill="white" fill-opacity="0.1"/>
+  <text x="96" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="36" fill="white">GW</text>
+  <text x="96" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#93C5FD">GH</text>
+  <rect x="52" y="130" width="88" height="4" rx="2" fill="white" fill-opacity="0.4"/>
+  <rect x="64" y="142" width="64" height="4" rx="2" fill="white" fill-opacity="0.25"/>
+</svg>
