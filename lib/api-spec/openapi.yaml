@@ -215,6 +215,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /grades/parse-transcript:
+    post:
+      operationId: parseTranscript
+      tags: [grades]
+      summary: Parse a grade transcript image with AI to extract courses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseTranscriptRequest"
+      responses:
+        "200":
+          description: Parsed courses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParseTranscriptResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /grades/profile:
     post:
       operationId: saveUserProfile
@@ -467,6 +492,12 @@ components:
         remainingCredits:
           type: number
           nullable: true
+        remainingSemesters:
+          type: integer
+          nullable: true
+        coursesPerSemester:
+          type: integer
+          nullable: true
         requiredGpa:
           type: number
           nullable: true
@@ -486,7 +517,82 @@ components:
         classification:
           type: string
           nullable: true
+        progressPercentage:
+          type: number
+          nullable: true
+        semesterPlans:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/SemesterPlan"
       required: []
+
+    SemesterPlan:
+      type: object
+      properties:
+        semesterLabel:
+          type: string
+        requiredGpa:
+          type: number
+        courseRecommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseRecommendation"
+      required:
+        - semesterLabel
+        - requiredGpa
+        - courseRecommendations
+
+    CourseRecommendation:
+      type: object
+      properties:
+        courseNumber:
+          type: integer
+        recommendedGrade:
+          type: string
+        points:
+          type: number
+      required:
+        - courseNumber
+        - recommendedGrade
+        - points
+
+    ParseTranscriptRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+        mimeType:
+          type: string
+      required:
+        - imageBase64
+
+    ParseTranscriptResponse:
+      type: object
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParsedCourse"
+        error:
+          type: string
+          nullable: true
+      required:
+        - courses
+
+    ParsedCourse:
+      type: object
+      properties:
+        name:
+          type: string
+        creditHours:
+          type: number
+        grade:
+          type: string
+          nullable: true
+      required:
+        - name
+        - creditHours
 
     SaveCgpaGoalRequest:
       type: object
@@ -495,6 +601,12 @@ components:
           type: number
         remainingCredits:
           type: number
+        remainingSemesters:
+          type: integer
+          nullable: true
+        coursesPerSemester:
+          type: integer
+          nullable: true
       required:
         - targetCgpa
         - remainingCredits

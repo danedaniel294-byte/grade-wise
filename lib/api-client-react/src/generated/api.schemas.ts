@@ -114,18 +114,52 @@ export const CgpaGoalLikelihood = {
   very_low: "very_low",
 } as const;
 
+export interface CourseRecommendation {
+  courseNumber: number;
+  recommendedGrade: string;
+  points: number;
+}
+
+export interface SemesterPlan {
+  semesterLabel: string;
+  requiredGpa: number;
+  courseRecommendations: CourseRecommendation[];
+}
+
 export interface CgpaGoal {
   targetCgpa?: number | null;
   remainingCredits?: number | null;
+  remainingSemesters?: number | null;
+  coursesPerSemester?: number | null;
   requiredGpa?: number | null;
   likelihood?: CgpaGoalLikelihood;
   currentCgpa?: number | null;
   classification?: string | null;
+  progressPercentage?: number | null;
+  semesterPlans?: SemesterPlan[] | null;
+}
+
+export interface ParseTranscriptRequest {
+  imageBase64: string;
+  mimeType?: string;
+}
+
+export interface ParsedCourse {
+  name: string;
+  creditHours: number;
+  grade?: string | null;
+}
+
+export interface ParseTranscriptResponse {
+  courses: ParsedCourse[];
+  error?: string | null;
 }
 
 export interface SaveCgpaGoalRequest {
   targetCgpa: number;
   remainingCredits: number;
+  remainingSemesters?: number | null;
+  coursesPerSemester?: number | null;
 }
 
 export interface SaveProfileRequest {

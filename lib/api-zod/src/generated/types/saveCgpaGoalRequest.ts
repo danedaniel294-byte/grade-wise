@@ -9,4 +9,6 @@
 export interface SaveCgpaGoalRequest {
   targetCgpa: number;
   remainingCredits: number;
+  remainingSemesters?: number | null;
+  coursesPerSemester?: number | null;
 }

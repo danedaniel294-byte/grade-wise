@@ -6,12 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CgpaGoalLikelihood } from "./cgpaGoalLikelihood";
+import type { SemesterPlan } from "./semesterPlan";
 
 export interface CgpaGoal {
   targetCgpa?: number | null;
   remainingCredits?: number | null;
+  remainingSemesters?: number | null;
+  coursesPerSemester?: number | null;
   requiredGpa?: number | null;
   likelihood?: CgpaGoalLikelihood;
   currentCgpa?: number | null;
   classification?: string | null;
+  progressPercentage?: number | null;
+  semesterPlans?: SemesterPlan[] | null;
 }

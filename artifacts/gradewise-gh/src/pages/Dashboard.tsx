@@ -1,16 +1,17 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   useGetMe,
   useGetUniversities,
   useGetSemesters,
   useSaveSemester,
+  useParseTranscript,
   SaveCourseRequest
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Save, GraduationCap, Award, Calculator, Loader2, BookOpen, ExternalLink, TrendingUp } from "lucide-react";
+import { Plus, Trash2, Save, GraduationCap, Award, Calculator, Loader2, BookOpen, ExternalLink, TrendingUp, Scan, Star, Flame, CheckCircle2, Zap, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -62,6 +63,8 @@ export default function Dashboard() {
   const { data: universities } = useGetUniversities();
   const { data: semesters, isLoading: loadingSemesters, refetch: refetchSemesters } = useGetSemesters();
   const { mutate: saveSemester, isPending: saving } = useSaveSemester();
+  const { mutate: parseTranscript, isPending: parsing } = useParseTranscript();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeLevel, setActiveLevel] = useState(100);
   const [activeSemester, setActiveSemester] = useState(1);
@@ -186,6 +189,49 @@ export default function Dashboard() {
     return points;
   }, [semesters, gradingScale]);
 
+  const handleUploadTranscript = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image file (JPEG, PNG, etc.)", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      parseTranscript(
+        { data: { imageBase64: base64, mimeType: file.type } },
+        {
+          onSuccess: (data) => {
+            if (data.error) {
+              toast({ title: "Parsing error", description: data.error, variant: "destructive" });
+              return;
+            }
+            if (data.courses.length === 0) {
+              toast({ title: "No courses found", description: "The AI couldn't find any graded courses. Try a clearer image.", variant: "destructive" });
+              return;
+            }
+            const mapped: SaveCourseRequest[] = data.courses.map(c => ({
+              name: c.name,
+              creditHours: c.creditHours,
+              grade: c.grade ?? null,
+              score: null,
+            }));
+            setLocalCourses(mapped);
+            toast({ title: `${data.courses.length} courses imported!`, description: "Review and save your transcript results." });
+          },
+          onError: (err: any) => {
+            toast({ title: "Upload failed", description: err?.error?.error ?? "Failed to parse transcript.", variant: "destructive" });
+          },
+        }
+      );
+    };
+    reader.readAsDataURL(file);
+    // reset so same file can be re-uploaded
+    e.target.value = "";
+  };
+
   const handleSave = () => {
     const validCourses = localCourses.filter(c => c.name.trim() !== "");
     if (validCourses.length === 0) {
@@ -247,6 +293,44 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Compact Badges Row */}
+      {(() => {
+        const semCount = semesters?.length ?? 0;
+        const cgpa = currentCgpa;
+        const compactBadges = [
+          { label: "Getting Started", icon: Star, earned: true, color: "text-amber-500" },
+          { label: "Data Pioneer", icon: BookOpen, earned: semCount >= 1, color: "text-blue-500" },
+          { label: "Consistent", icon: Flame, earned: semCount >= 3, color: "text-orange-500" },
+          { label: "Scholar", icon: Award, earned: cgpa >= 3.0, color: "text-purple-500" },
+          { label: "High Achiever", icon: Zap, earned: cgpa >= 3.5, color: "text-indigo-500" },
+          { label: "First Class", icon: CheckCircle2, earned: cgpa >= (university?.firstClass ?? 3.6), color: "text-emerald-500" },
+        ];
+        const earnedBadges = compactBadges.filter(b => b.earned);
+        return (
+          <div className="flex flex-wrap gap-2">
+            {compactBadges.map((b, i) => (
+              <motion.div
+                key={b.label}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: b.earned ? 1 : 0.35, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all
+                  ${b.earned ? `${b.color} bg-white/5 border-current/20` : "text-muted-foreground border-border/40 grayscale"}`}
+                title={b.earned ? `${b.label} — Earned!` : `${b.label} — Not yet earned`}
+              >
+                <b.icon className="w-3.5 h-3.5" />
+                {b.label}
+                {b.earned && <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />}
+              </motion.div>
+            ))}
+            <a href="#/goals" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 text-xs font-medium text-primary hover:bg-primary/10 transition-all">
+              <Target className="w-3.5 h-3.5" />
+              {earnedBadges.length}/{compactBadges.length} — See All
+            </a>
+          </div>
+        );
+      })()}
+
       {/* Level / Semester Selectors */}
       <div className="bg-card border border-border/60 shadow-sm rounded-2xl p-2 flex flex-col md:flex-row gap-2">
         <div className="flex gap-1 overflow-x-auto pb-2 md:pb-0 hide-scrollbar flex-1">
@@ -284,19 +368,37 @@ export default function Dashboard() {
 
       {/* Course Table */}
       <Card className="rounded-3xl border-border/60 shadow-lg shadow-black/5 overflow-hidden">
-        <CardHeader className="bg-secondary/30 border-b border-border/40 px-6 py-5 flex flex-row items-center justify-between">
+        <CardHeader className="bg-secondary/30 border-b border-border/40 px-6 py-5 flex flex-row items-center justify-between gap-3 flex-wrap">
           <div>
             <CardTitle className="font-display text-xl">Level {activeLevel}, Sem {activeSemester}</CardTitle>
             <CardDescription>Enter your courses and grades to calculate GPA.</CardDescription>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-xl shadow-md hover:shadow-lg transition-all"
-          >
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Save Semester
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleUploadTranscript}
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={parsing}
+              className="rounded-xl gap-2 border-primary/30 hover:bg-primary/10 hover:text-primary text-muted-foreground"
+            >
+              {parsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
+              {parsing ? "Parsing..." : "AI Import"}
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-xl shadow-md hover:shadow-lg transition-all"
+            >
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Save Semester
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">

@@ -22,6 +22,8 @@ import type {
   CgpaGoal,
   ErrorResponse,
   HealthStatus,
+  ParseTranscriptRequest,
+  ParseTranscriptResponse,
   SaveCgpaGoalRequest,
   SaveProfileRequest,
   SaveSemesterRequest,
@@ -825,6 +827,92 @@ export const useSaveCgpaGoal = <
   TContext
 > => {
   return useMutation(getSaveCgpaGoalMutationOptions(options));
+};
+
+/**
+ * @summary Parse a grade transcript image with AI to extract courses
+ */
+export const getParseTranscriptUrl = () => {
+  return `/api/grades/parse-transcript`;
+};
+
+export const parseTranscript = async (
+  parseTranscriptRequest: ParseTranscriptRequest,
+  options?: RequestInit,
+): Promise<ParseTranscriptResponse> => {
+  return customFetch<ParseTranscriptResponse>(getParseTranscriptUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(parseTranscriptRequest),
+  });
+};
+
+export const getParseTranscriptMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof parseTranscript>>,
+    TError,
+    { data: BodyType<ParseTranscriptRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof parseTranscript>>,
+  TError,
+  { data: BodyType<ParseTranscriptRequest> },
+  TContext
+> => {
+  const mutationKey = ["parseTranscript"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof parseTranscript>>,
+    { data: BodyType<ParseTranscriptRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return parseTranscript(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ParseTranscriptMutationResult = NonNullable<
+  Awaited<ReturnType<typeof parseTranscript>>
+>;
+export type ParseTranscriptMutationBody = BodyType<ParseTranscriptRequest>;
+export type ParseTranscriptMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Parse a grade transcript image with AI to extract courses
+ */
+export const useParseTranscript = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof parseTranscript>>,
+    TError,
+    { data: BodyType<ParseTranscriptRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof parseTranscript>>,
+  TError,
+  { data: BodyType<ParseTranscriptRequest> },
+  TContext
+> => {
+  return useMutation(getParseTranscriptMutationOptions(options));
 };
 
 /**

@@ -172,6 +172,8 @@ export const SaveSemesterResponse = zod.object({
 export const GetCgpaGoalResponse = zod.object({
   targetCgpa: zod.number().nullish(),
   remainingCredits: zod.number().nullish(),
+  remainingSemesters: zod.number().nullish(),
+  coursesPerSemester: zod.number().nullish(),
   requiredGpa: zod.number().nullish(),
   likelihood: zod
     .union([
@@ -185,6 +187,22 @@ export const GetCgpaGoalResponse = zod.object({
     .nullish(),
   currentCgpa: zod.number().nullish(),
   classification: zod.string().nullish(),
+  progressPercentage: zod.number().nullish(),
+  semesterPlans: zod
+    .array(
+      zod.object({
+        semesterLabel: zod.string(),
+        requiredGpa: zod.number(),
+        courseRecommendations: zod.array(
+          zod.object({
+            courseNumber: zod.number(),
+            recommendedGrade: zod.string(),
+            points: zod.number(),
+          }),
+        ),
+      }),
+    )
+    .nullish(),
 });
 
 /**
@@ -193,11 +211,15 @@ export const GetCgpaGoalResponse = zod.object({
 export const SaveCgpaGoalBody = zod.object({
   targetCgpa: zod.number(),
   remainingCredits: zod.number(),
+  remainingSemesters: zod.number().nullish(),
+  coursesPerSemester: zod.number().nullish(),
 });
 
 export const SaveCgpaGoalResponse = zod.object({
   targetCgpa: zod.number().nullish(),
   remainingCredits: zod.number().nullish(),
+  remainingSemesters: zod.number().nullish(),
+  coursesPerSemester: zod.number().nullish(),
   requiredGpa: zod.number().nullish(),
   likelihood: zod
     .union([
@@ -211,6 +233,41 @@ export const SaveCgpaGoalResponse = zod.object({
     .nullish(),
   currentCgpa: zod.number().nullish(),
   classification: zod.string().nullish(),
+  progressPercentage: zod.number().nullish(),
+  semesterPlans: zod
+    .array(
+      zod.object({
+        semesterLabel: zod.string(),
+        requiredGpa: zod.number(),
+        courseRecommendations: zod.array(
+          zod.object({
+            courseNumber: zod.number(),
+            recommendedGrade: zod.string(),
+            points: zod.number(),
+          }),
+        ),
+      }),
+    )
+    .nullish(),
+});
+
+/**
+ * @summary Parse a grade transcript image with AI to extract courses
+ */
+export const ParseTranscriptBody = zod.object({
+  imageBase64: zod.string(),
+  mimeType: zod.string().optional(),
+});
+
+export const ParseTranscriptResponse = zod.object({
+  courses: zod.array(
+    zod.object({
+      name: zod.string(),
+      creditHours: zod.number(),
+      grade: zod.string().nullish(),
+    }),
+  ),
+  error: zod.string().nullish(),
 });
 
 /**

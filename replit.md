@@ -22,14 +22,23 @@ GradeWise GH — A GPA/CGPA calculator web app for Ghanaian university students.
 ## Features
 
 - Sign up / Sign in with username only (no password)
-- 45+ Ghanaian universities with their specific grading scales (KNUST, UG, UCC, UDS, UMAT, GIMPA, and standard)
+- 45+ Ghanaian universities with specific grading scales (KNUST, UG, UCC, UDS, UMAT, GIMPA, and standard)
 - Level selection (100–600) and semester selection (1st / 2nd)
 - GPA & CGPA calculator per semester and cumulative
-- Desired CGPA goal setting with required GPA suggestions
-- Likelihood meter (Very High / High / Moderate / Low / Very Low) for academic achievement
+- Animated intro splash screen (5-step Framer Motion, shown on first visit only via localStorage)
+- **Enhanced Goals page**: CGPA progress bar, multi-semester planner, semester-by-semester grade recommendation table, feasibility analysis
+- **Achievement badges**: 8 badges (Getting Started, Data Pioneer, Consistent, Scholar, High Achiever, First Class Aspirant, Goal Setter, Goal Achieved) — shown on Dashboard and Goals page
+- **AI transcript parsing**: Upload a photo of your transcript → AI (OpenAI vision) extracts courses automatically; "AI Import" button in Dashboard course table header
+- Likelihood meter (Very High / High / Moderate / Low / Very Low) for CGPA goal achievement
 - Degree classification (First Class, 2nd Upper, 2nd Lower, Third Class, Pass, Fail)
-- Theme customization (Ocean Blue, Forest Green, Sunset Orange, Royal Purple, Rose Pink + custom colors)
-- User profile persistence (university, level, theme, goals saved to DB)
+- 15 color themes: ocean, forest, sunset, purple, rose, gold, midnight, crimson, teal, coffee, slate, mint, coral, electric, emerald + custom colors
+- CGPA progress chart (Recharts LineChart with First Class reference line)
+- Adsterra banner ads + affiliate support button
+- Visit counter (count.getloli.com)
+- QR share modal (qrcode.react)
+- About / Privacy / Terms / Pricing info tabs in footer
+- PWA support with install banner (vite-plugin-pwa)
+- User profile persistence (university, level, theme, goals, semesters/courses saved to DB)
 - Logout functionality
 
 ## Structure

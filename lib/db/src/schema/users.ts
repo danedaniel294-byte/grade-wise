@@ -12,6 +12,8 @@ export const usersTable = pgTable("users", {
   customSecondaryColor: text("custom_secondary_color"),
   targetCgpa: real("target_cgpa"),
   remainingCredits: real("remaining_credits"),
+  remainingSemesters: integer("remaining_semesters"),
+  coursesPerSemester: integer("courses_per_semester"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true });
